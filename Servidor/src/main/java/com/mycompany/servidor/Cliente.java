@@ -7,8 +7,10 @@ package com.mycompany.servidor;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 /**
  *
@@ -25,7 +27,7 @@ public class Cliente {
             serverSocket = new Socket(serverAddress, serverPort);
             System.out.println("Conectado ao servidor em " + serverAddress + ":" + serverPort);
             in = new BufferedReader(new InputStreamReader(serverSocket.getInputStream()));
-            out = new PrintWriter(serverSocket.getOutputStream(), true);
+            out = new PrintWriter(new OutputStreamWriter(serverSocket.getOutputStream(), StandardCharsets.UTF_8), true);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -67,20 +69,30 @@ public class Cliente {
             receiveThread.start();
 
             // Lê as mensagens do console e envia ao servidor
-            String inputLine;
-            while ((inputLine = consoleReader.readLine()) != null) {
-                if (inputLine.startsWith("/msg")) {
+            String input;
+            while ((input = consoleReader.readLine()) != null) {
+                if (input.startsWith("/msg")) {
                     // Lógica para enviar mensagem direta
-                    String[] parts = inputLine.split(" ", 3);
+                    String[] parts = input.split(" ", 3);
                     if (parts.length == 3) {
                         String recipientEmail = parts[1];
                         String message = parts[2];
                         out.println("/msg " + recipientEmail + " " + message);
                     }
-                } else if (inputLine.equals("/clientes")) {
+                } else if (input.equals("/clientes")) {
                     out.println("/clientes");
+                } else if (input.startsWith("/historico")) {
+                    String[] parts = input.split(" ", 2);
+                    if (parts.length == 2) {
+                        String recipientEmail = parts[1];
+                        out.println("/historico " + recipientEmail);
+                    }
+                } else if (input.equals("/sair")) {
+                    // Desconecta o cliente de forma segura
+                    out.println(input);
+                    break;
                 } else {
-                    out.println(inputLine);
+                    System.out.println("Comando invalido! Tente novamente!");
                 }
             }
 
@@ -91,6 +103,8 @@ public class Cliente {
             serverSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (NullPointerException e) {
+            System.out.println("Email invalido!");
         }
     }
 
